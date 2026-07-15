@@ -27,12 +27,9 @@ def _require_env(name: str, legacy_name: str | None = None) -> str:
 def make_fastcontext_agent(
     trajectory_file: str,
     work_dir: str,
-    **kwargs,
 ) -> Agent:
     name = "FastContext"
-    system_prompt = kwargs.get("system_prompt", None)
-    if system_prompt is None:
-        system_prompt = load_system_prompt(work_dir)
+    system_prompt = load_system_prompt()
 
     max_tokens = os.getenv("FC_MAX_TOKENS", "4096").strip()
     temperature = os.getenv("FC_TEMPERATURE", "0.7").strip()

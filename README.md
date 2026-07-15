@@ -157,6 +157,22 @@ export FC_MAX_TOKENS=1024
 export FC_TEMPERATURE=0
 ```
 
+### Local LM Studio endpoint
+
+[LM Studio](https://lmstudio.ai/) works the same way through its OpenAI-compatible API. Load a
+FastContext model in LM Studio, start the server (default port 1234), and point FastContext at it:
+
+```bash
+export FC_BASE_URL="http://localhost:1234"
+export FC_MODEL="fastcontext-1.0-4b-sft"  # must match an ID from `curl http://localhost:1234/v1/models`
+
+# LM Studio does not require an API key.
+```
+
+A bare server root is routed to the OpenAI-compatible `/v1` path automatically, as are LM Studio's
+native REST paths (`/api/v1`, `/api/v0`). The native `/api/v1/chat` endpoint itself is not used
+because it does not accept custom tool definitions, which the agent's GLOB/GREP/READ loop requires.
+
 Run FastContext from the repository you want to explore:
 
 ```bash

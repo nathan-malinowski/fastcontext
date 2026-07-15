@@ -1,5 +1,6 @@
 import os
 from typing import Any, Literal
+from urllib.parse import urlparse
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -8,6 +9,20 @@ from pydantic import BaseModel, model_serializer
 
 class RequestyAPIError(Exception):
     """Exception for Requesty LLM API errors."""
+
+
+def normalize_base_url(base_url: str) -> str:
+    """Route bare server roots to their OpenAI-compatible API path.
+
+    Local servers such as LM Studio (http://localhost:1234) and Ollama
+    (http://localhost:11434) serve chat completions under /v1. LM Studio's
+    native REST API (/api/v1/chat) does not accept custom tool definitions,
+    so FastContext always talks to the OpenAI-compatible endpoint.
+    """
+    base_url = base_url.rstrip("/")
+    if urlparse(base_url).path in ("", "/api/v1", "/api/v0"):
+        return base_url.rsplit("/api/", 1)[0] + "/v1"
+    return base_url
 
 
 type Role = Literal[
@@ -51,8 +66,8 @@ class Message(BaseModel):
 class LLM:
     def __init__(self, model: str, api_key: str | None, base_url: str, **kwargs) -> None:
         self.model = model
-        self.base_url = base_url
-        self.client = AsyncOpenAI(api_key=api_key or "ollama", base_url=base_url)
+        self.base_url = normalize_base_url(base_url)
+        self.client = AsyncOpenAI(api_key=api_key or "ollama", base_url=self.base_url)
         self.max_tokens = kwargs.get("max_tokens", 4096)
         self.temperature = kwargs.get("temperature", 0.7)
         self.top_p = kwargs.get("top_p", 0.95)
@@ -90,14 +105,16 @@ class LLM:
             print("LLM Payload:", payload)
 
         try:
-            if "claude" in self.model:
-                # Use the custom API call for claude models
-                from fastcontext.agent.llm_api import call_completion
-
-                response = call_completion(model=self.model, messages=messages, tools=tools)
-            else:
-                response = await self.client.chat.completions.create(**payload)
-            usage = response.usage.to_dict()
+            response = await self.client.chat.completions.create(**payload)
+            if not getattr(response, "choices", None):
+                server_error = getattr(response, "error", None)
+                detail = f" Server error: {server_error}" if server_error else ""
+                raise ValueError(
+                    f"LLM API at {self.base_url} returned no choices."
+                    f" Check that FC_BASE_URL points to an OpenAI-compatible endpoint"
+                    f" and FC_MODEL matches a served model.{detail}"
+                )
+            usage = response.usage.to_dict() if response.usage else None
             content = None
             reasoning_content = None
             tool_calls: list[ChatCompletionMessageToolCall] = []
