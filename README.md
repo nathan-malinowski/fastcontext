@@ -242,7 +242,41 @@ Then register it in `~/.claude/settings.json` (merge into any existing `hooks` k
     ]
   }
 }
+
+## OpenCode Integration (Optional)
+
+OpenCode has no native `hook` config block — hooks are implemented as plugins. The
+`skills/fastcontext/` directory ships everything needed to enforce exploration under
+OpenCode:
+
+- `SKILL.md` — the fastcontext skill (delegates exploration to FastContext).
+- `hooks/fastcontext-enforcer.sh` — the same exploration-enforcer logic used by the
+  Claude Code hook (blocks the first edit to any code file no trajectory has touched).
+- `.opencode/plugin/fastcontext-enforcer.ts` — an OpenCode plugin that wraps the bash
+  enforcer and denies `edit`/`write` tool calls until the file is explored.
+
+Install for all projects:
+
+```bash
+# Skill: OpenCode auto-loads skills from ~/.config/opencode/skills
+cp -r skills/fastcontext ~/.config/opencode/skills/fastcontext
+
+# Enforcer hook script (referenced by the plugin)
+mkdir -p ~/.config/opencode/hooks
+cp skills/fastcontext/hooks/fastcontext-enforcer.sh ~/.config/opencode/hooks/
+chmod +x ~/.config/opencode/hooks/fastcontext-enforcer.sh
+
+# Plugin: OpenCode auto-discovers *.ts from ~/.config/opencode/plugin
+cp .opencode/plugin/fastcontext-enforcer.ts ~/.config/opencode/plugin/
 ```
+
+The plugin resolves the enforcer script from `skills/fastcontext/hooks/` (when run inside
+this repo) or `~/.config/opencode/hooks/` (when installed globally), so the same file works
+in both contexts. It fires at most once per file per session and stands down automatically
+when the FastContext endpoint is unreachable, matching the Claude Code behavior.
+
+> Config and plugins are loaded once at startup and are not hot-reloaded. After
+> installing, quit and restart OpenCode for the skill and enforcer to take effect.
 
 ## Programmatic Use
 
