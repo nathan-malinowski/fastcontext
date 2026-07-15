@@ -12,16 +12,16 @@ class RequestyAPIError(Exception):
 
 
 def normalize_base_url(base_url: str) -> str:
-    """Route bare server roots to their OpenAI-compatible API path.
+    """Append the OpenAI-compatible /v1 path to bare server roots.
 
     Local servers such as LM Studio (http://localhost:1234) and Ollama
-    (http://localhost:11434) serve chat completions under /v1. LM Studio's
-    native REST API (/api/v1/chat) does not accept custom tool definitions,
-    so FastContext always talks to the OpenAI-compatible endpoint.
+    (http://localhost:11434) serve chat completions under /v1. URLs that
+    already carry a path (e.g. a gateway's /api/v1) are used verbatim —
+    many providers legitimately serve the OpenAI API under custom prefixes.
     """
     base_url = base_url.rstrip("/")
-    if urlparse(base_url).path in ("", "/api/v1", "/api/v0"):
-        return base_url.rsplit("/api/", 1)[0] + "/v1"
+    if urlparse(base_url).path == "":
+        return base_url + "/v1"
     return base_url
 
 

@@ -1,11 +1,15 @@
+from pathlib import Path
+
 from fastcontext.agent.llm import FunctionCall, Message
 from fastcontext.agent.tool import ToolSet
+
+REPO_ROOT = str(Path(__file__).parent.parent)
 
 
 async def test_toolset():
     from fastcontext.agent.tool.read import ReadTool
 
-    toolset = ToolSet(tools=[ReadTool()])
+    toolset = ToolSet(tools=[ReadTool()], work_dir=REPO_ROOT)
     schema_list = toolset.schema_list()
     print(schema_list)
     assert len(schema_list) == 1
@@ -18,20 +22,19 @@ async def test_toolset():
             FunctionCall(
                 id="call_1_1",
                 name="Read",
-                arguments='{"path": "/workspace/README", "offset": 1, "limit": 100}',
+                arguments=f'{{"path": "{REPO_ROOT}/README.md", "offset": 1, "limit": 100}}',
             ),
             FunctionCall(
                 id="call_1_2",
                 name="Read",
-                arguments='{"path": "/workspace/README.md", "offset": 4, "limit": 100}',
+                arguments=f'{{"path": "{REPO_ROOT}/pyproject.toml", "offset": 1, "limit": 100}}',
             ),
         ],
     )
     tools_result_messages = await toolset.call(tool_call_msg)
-    print(tools_result_messages)
-    for i, msg in enumerate(tools_result_messages):
-        print(f"=== msg {i} ===")
-        print(msg.content)
+    assert len(tools_result_messages) == 2
+    assert "FastContext" in tools_result_messages[0].content
+    assert "fastcontext" in tools_result_messages[1].content
 
 
 async def tools_schema_list():
@@ -41,7 +44,7 @@ async def tools_schema_list():
     from fastcontext.agent.tool.grep import GrepTool
     from fastcontext.agent.tool.read import ReadTool
 
-    toolset = ToolSet(tools=[GrepTool(), GlobTool(), ReadTool()], work_dir="/workspace")
+    toolset = ToolSet(tools=[GrepTool(), GlobTool(), ReadTool()], work_dir=REPO_ROOT)
     schema_list = toolset.schema_list()
     print(schema_list)
     with open("tools_schema.json", "w", encoding="utf-8") as f:

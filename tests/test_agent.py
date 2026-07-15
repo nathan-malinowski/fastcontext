@@ -1,20 +1,28 @@
 import os
+from pathlib import Path
+
+import pytest
 
 from fastcontext.agent.agent import Agent
 from fastcontext.agent.llm import LLM
 from fastcontext.agent.tool import ToolSet
 from fastcontext.agent.tool.read import ReadTool
 
+MODEL = os.getenv("FC_MODEL") or os.getenv("MODEL")
+BASE_URL = os.getenv("FC_BASE_URL") or os.getenv("BASE_URL")
+API_KEY = os.getenv("FC_API_KEY") or os.getenv("API_KEY")
 
-async def test_agent():
-    llm = LLM(
-        model=os.getenv("MODEL"),
-        api_key=os.getenv("API_KEY"),
-        base_url=os.getenv("BASE_URL"),
-        debug=True,
-    )
+REPO_ROOT = str(Path(__file__).parent.parent)
 
-    work_dir = "/workspace"
+
+@pytest.mark.skipif(
+    not (MODEL and BASE_URL),
+    reason="integration test: requires a live endpoint via FC_MODEL/FC_BASE_URL (or MODEL/BASE_URL)",
+)
+async def test_agent(tmp_path):
+    llm = LLM(model=MODEL, api_key=API_KEY, base_url=BASE_URL)
+
+    work_dir = REPO_ROOT
     toolset = ToolSet(tools=[ReadTool()], work_dir=work_dir)
 
     agent = Agent(
@@ -22,16 +30,17 @@ async def test_agent():
         system_prompt="You are a helpful coding assistant.",
         llm=llm,
         toolset=toolset,
-        trajectory_file="test_trajectory.log",
+        trajectory_file=str(tmp_path / "test_trajectory.jsonl"),
         work_dir=work_dir,
     )
 
     result = await agent.run(
-        "Please summarize file content of '/workspace/README.md' to one sentence.",
+        f"Please summarize file content of '{work_dir}/README.md' to one sentence.",
         max_turns=5,
         verbose=True,
     )
     print(result)
+    assert result
 
 
 async def _run_agent(instance: dict, agent_config: dict) -> dict:

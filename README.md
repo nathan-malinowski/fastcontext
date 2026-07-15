@@ -169,9 +169,10 @@ export FC_MODEL="fastcontext-1.0-4b-sft"  # must match an ID from `curl http://l
 # LM Studio does not require an API key.
 ```
 
-A bare server root is routed to the OpenAI-compatible `/v1` path automatically, as are LM Studio's
-native REST paths (`/api/v1`, `/api/v0`). The native `/api/v1/chat` endpoint itself is not used
-because it does not accept custom tool definitions, which the agent's GLOB/GREP/READ loop requires.
+A bare server root is routed to the OpenAI-compatible `/v1` path automatically. URLs that already
+carry a path (for example a gateway's `/api/v1`) are used verbatim. LM Studio's native REST API
+(`/api/v0`) is not used because it does not accept custom tool definitions, which the agent's
+GLOB/GREP/READ loop requires — point `FC_BASE_URL` at the server root or `/v1` instead.
 
 Run FastContext from the repository you want to explore:
 

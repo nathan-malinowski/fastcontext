@@ -1,4 +1,6 @@
-from fastcontext.agent.utils import get_final_answer
+from pathlib import Path
+
+from fastcontext.agent.utils import get_final_answer, parse_citations
 
 _REAL_FILE = __file__
 
@@ -82,18 +84,44 @@ def test_prose_answer_falls_back_to_raw_block():
     assert body in result, "unparseable answers must be returned verbatim, not dropped"
 
 
-def test_all_citations_invalid_falls_back_to_raw_block():
+def test_all_citations_invalid_returns_empty_block_as_failure_signal():
     body = "/nonexistent/file.py:2 (dropped by validation)"
     text = _wrap(body)
     result = get_final_answer(text)
     print(result)
-    assert body in result
+    assert "/nonexistent/file.py" not in result, "hallucinated paths must not pass through"
+    assert result == "<final_answer>\n\n</final_answer>"
 
 
 def test_no_final_answer_tag_returns_text():
     result = get_final_answer("plain answer with no tags")
     print(result)
     assert result == "plain answer with no tags"
+
+
+def test_none_input_returns_empty_string():
+    assert get_final_answer(None) == ""
+
+
+def test_spaced_hyphen_is_explanation_not_end_line():
+    text = _wrap(f"{_REAL_FILE}:120 - 3 call sites need updating")
+    result = get_final_answer(text)
+    print(result)
+    assert ":120-3" not in result, "spaced hyphen must not become an inverted range"
+    assert f"{_REAL_FILE}:120 - 3 call sites need updating" in result
+
+
+def test_relative_path_validated_against_work_dir(monkeypatch):
+    repo_root = str(Path(_REAL_FILE).parent.parent)
+    rel = str(Path(_REAL_FILE).relative_to(repo_root))
+    monkeypatch.chdir("/")
+    result = get_final_answer(_wrap(f"{rel}:1-5 note"), work_dir=repo_root)
+    print(result)
+    assert f"{rel}:1-5 note" in result
+
+
+def test_parse_citations_no_tag_returns_empty_list():
+    assert parse_citations("no tags here") == []
 
 
 if __name__ == "__main__":

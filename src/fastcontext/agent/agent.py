@@ -40,8 +40,7 @@ class Agent:
         n_turn = 0
         # The model has no other way to learn the exploration root; without it,
         # small models guess absolute paths and every tool call fails.
-        if self.work_dir not in prompt:
-            prompt = f"Repository root: {self.work_dir} (use this absolute path in all tool calls). Question: {prompt}"
+        prompt = f"Repository root: {self.work_dir} (use this absolute path in all tool calls). Question: {prompt}"
         await self.context.add(Message(role="system", content=self.system_prompt))
         await self.context.add(Message(role="user", content=prompt))
 
@@ -76,7 +75,7 @@ class Agent:
                 await self.context.add(tools_result_msg)
             else:
                 if citation:
-                    return get_final_answer(step_msg.content)
+                    return get_final_answer(step_msg.content, self.work_dir)
                 return step_msg.content
 
     async def run(self, prompt: str, max_turns: int = 4, verbose: bool = False, citation: bool = False) -> str:

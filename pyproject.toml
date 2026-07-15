@@ -49,6 +49,9 @@ build-backend = "uv_build"
 [project.scripts]
 fastcontext = "fastcontext.cli:main"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.isort]
 profile = "black"
 line_length = 119

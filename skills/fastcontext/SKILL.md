@@ -52,7 +52,7 @@ fastcontext -q "<complex question>" --max-turns 12 --citation
 fastcontext -q "<question>" --max-turns 8
 ```
 
-With `--citation`, unparseable or unvalidated answers fall back to the raw `<final_answer>` text — read it as prose in that case.
+With `--citation`, prose answers with no parseable citations fall back to the raw `<final_answer>` text — read them as prose. An **empty** block means every cited path failed validation (likely hallucinated): treat the run as failed and re-query.
 
 ## Query tips
 
