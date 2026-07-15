@@ -242,6 +242,7 @@ Then register it in `~/.claude/settings.json` (merge into any existing `hooks` k
     ]
   }
 }
+```
 
 ## OpenCode Integration (Optional)
 
@@ -260,15 +261,18 @@ Install for all projects:
 ```bash
 # Skill: OpenCode auto-loads skills from ~/.config/opencode/skills
 cp -r skills/fastcontext ~/.config/opencode/skills/fastcontext
+```
 
-# Enforcer hook script (referenced by the plugin)
+### Plugin: OpenCode auto-discovers *.ts from ~/.config/opencode/plugin
+
+```bash
+cp .opencode/plugin/fastcontext-enforcer.ts ~/.config/opencode/plugin/
+```
+
+### Enforcer hook script (referenced by the plugin)
 mkdir -p ~/.config/opencode/hooks
 cp skills/fastcontext/hooks/fastcontext-enforcer.sh ~/.config/opencode/hooks/
 chmod +x ~/.config/opencode/hooks/fastcontext-enforcer.sh
-
-# Plugin: OpenCode auto-discovers *.ts from ~/.config/opencode/plugin
-cp .opencode/plugin/fastcontext-enforcer.ts ~/.config/opencode/plugin/
-```
 
 The plugin resolves the enforcer script from `skills/fastcontext/hooks/` (when run inside
 this repo) or `~/.config/opencode/hooks/` (when installed globally), so the same file works
