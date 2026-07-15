@@ -21,9 +21,13 @@ def load_benchmark_data(bench: str):
         raise ValueError(f"Unsupported benchmark: {bench}")
 
 
-def load_pred_sample_citations(input_file: str) -> dict[str, list[str]]:
+def load_pred_sample_citations(input_file: str, workspace: str = "/testbed/") -> dict[str, list[str]]:
     """
     input_file: jsonl file, each line: {"instance_id": "<id>", "finial_response": "<response>"}
+
+    workspace must match the prefix used for the gold paths (parse_patch in
+    run_score strips "/testbed/"), otherwise absolute predictions never overlap
+    relative gold paths and correct citations score zero.
     """
 
     pred_sample_citations: dict[str, list[str]] = {}
@@ -31,7 +35,7 @@ def load_pred_sample_citations(input_file: str) -> dict[str, list[str]]:
         for line in f:
             data = json.loads(line)
             uuid = data["instance_id"]
-            citations = parse_final_answer(data["finial_response"])["citations"]
+            citations = parse_final_answer(data["finial_response"], workspace=workspace)["citations"]
             pred_sample_citations[uuid] = citations
     print(f"Loaded {len(pred_sample_citations)} predicted sample citations from {input_file}")
     return pred_sample_citations

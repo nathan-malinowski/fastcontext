@@ -123,6 +123,10 @@ export FC_API_KEY="your-api-key"
 # optional: override default FastContext parameters
 export FC_MAX_TOKENS=4096
 export FC_TEMPERATURE=0.7
+
+# optional: system prompt style — "minimal" (default) or "tuned" (the prompt
+# the FastContext SFT models were trained with, including a workspace listing)
+export FC_SYSTEM_PROMPT=tuned
 ```
 
 Benchmark runners may also pass separate FastContext credentials through `FASTCONTEXT_*` variables in

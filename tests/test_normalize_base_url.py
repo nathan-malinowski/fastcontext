@@ -24,3 +24,7 @@ def test_api_v0_untouched():
 
 def test_custom_prefix_untouched():
     assert normalize_base_url("https://llm.corp.com/gateway/v1") == "https://llm.corp.com/gateway/v1"
+
+
+def test_schemeless_url_gets_scheme_and_v1():
+    assert normalize_base_url("localhost:1234") == "http://localhost:1234/v1"

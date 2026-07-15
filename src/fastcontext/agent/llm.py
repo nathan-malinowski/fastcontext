@@ -20,6 +20,9 @@ def normalize_base_url(base_url: str) -> str:
     many providers legitimately serve the OpenAI API under custom prefixes.
     """
     base_url = base_url.rstrip("/")
+    if "://" not in base_url:
+        # urlparse reads "localhost:1234" as scheme "localhost"; default to http.
+        base_url = "http://" + base_url
     if urlparse(base_url).path == "":
         return base_url + "/v1"
     return base_url

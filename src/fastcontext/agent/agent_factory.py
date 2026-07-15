@@ -29,7 +29,8 @@ def make_fastcontext_agent(
     work_dir: str,
 ) -> Agent:
     name = "FastContext"
-    system_prompt = load_system_prompt()
+    prompt_style = (os.getenv("FC_SYSTEM_PROMPT") or "minimal").strip().lower()
+    system_prompt = load_system_prompt(prompt_style, work_dir)
 
     max_tokens = os.getenv("FC_MAX_TOKENS", "4096").strip()
     temperature = os.getenv("FC_TEMPERATURE", "0.7").strip()
@@ -68,4 +69,5 @@ def make_fastcontext_agent(
         toolset=toolset,
         trajectory_file=trajectory_file,
         work_dir=work_dir,
+        prompt_style=prompt_style,
     )

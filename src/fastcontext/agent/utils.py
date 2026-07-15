@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 from pathlib import Path
 
@@ -14,7 +15,30 @@ FINAL_ANSWER_RE = re.compile(r"<final_answer>(.*?)</final_answer>", re.DOTALL)
 CITATION_ENTRY_RE = re.compile(r"(.+?):L?(\d+)(?:[-–]L?(\d+))?\s*(.*)")
 
 
-def load_system_prompt() -> str:
+def load_system_prompt(style: str | None = None, work_dir: str | None = None) -> str:
+    """Load a system prompt: "minimal" (default) or "tuned".
+
+    "tuned" is the prompt the FastContext SFT models were trained with; it
+    embeds the OS, shell, workspace path, and a directory listing. Style can
+    also be selected via the FC_SYSTEM_PROMPT environment variable.
+    """
+    style = (style or os.getenv("FC_SYSTEM_PROMPT") or "minimal").strip().lower()
+    if style == "tuned":
+        text = (Path(__file__).parent / "system_tuned.md").read_text(encoding="utf-8").strip()
+        work_dir = work_dir or os.getcwd()
+        if platform.system() == "Windows":
+            shell_name = os.getenv("COMSPEC", "powershell.exe")
+        else:
+            shell_name = os.getenv("SHELL", "bash")
+        substitutions = {
+            "OS_KIND": platform.system(),
+            "SHELL_NAME": shell_name,
+            "WORK_DIR": work_dir,
+            "WORK_DIR_LS": "\n".join(os.listdir(work_dir)),
+        }
+        for key, value in substitutions.items():
+            text = text.replace("${" + key + "}", value)
+        return text
     return (Path(__file__).parent / "system.md").read_text(encoding="utf-8").strip()
 
 
@@ -33,9 +57,15 @@ def parse_citations(text: str) -> list[dict]:
         match = CITATION_ENTRY_RE.match(entry)
         if match:
             file_path = match.group(1).strip().strip("*`").strip()
+            # A citation path must look like a path — prose tokens such as
+            # "at 10:30" or "ratio 1:2" also match the entry regex.
+            if not any(ch in file_path for ch in "/\\."):
+                continue
             explanation = match.group(4).strip() if match.group(4) else ""
             start_line = int(match.group(2))
             end_line = int(match.group(3)) if match.group(3) else start_line
+            if end_line < start_line:
+                end_line = start_line
             line_range = f"{start_line}-{end_line}" if end_line != start_line else str(start_line)
             citations.append(
                 {

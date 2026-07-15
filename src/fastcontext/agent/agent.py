@@ -25,6 +25,7 @@ class Agent:
         toolset: ToolSet,
         trajectory_file: str,
         work_dir: str,
+        prompt_style: str = "minimal",
     ):
         self.name = name
         self.system_prompt = system_prompt
@@ -32,15 +33,21 @@ class Agent:
         self.toolset = toolset
         self.context = Context(trajectory_file)
         self.work_dir = work_dir
+        self.prompt_style = prompt_style
         self.run_id = str(uuid4())
         self.n_turn = 0
 
     async def _agent_loop(self, prompt: str, max_turns: int, verbose: bool, citation: bool) -> str:
         # user promp -> tool calls -> tool results -> tool calls ... -> assistant final answer
         n_turn = 0
-        # The model has no other way to learn the exploration root; without it,
-        # small models guess absolute paths and every tool call fails.
-        prompt = f"Repository root: {self.work_dir} (use this absolute path in all tool calls). Question: {prompt}"
+        if self.prompt_style == "tuned":
+            # Match the SFT training distribution: the query arrives in
+            # <query> tags and workspace context lives in the system prompt.
+            prompt = f"<query>{prompt}</query>"
+        else:
+            # The model has no other way to learn the exploration root; without it,
+            # small models guess absolute paths and every tool call fails.
+            prompt = f"Repository root: {self.work_dir} (use this absolute path in all tool calls). Question: {prompt}"
         await self.context.add(Message(role="system", content=self.system_prompt))
         await self.context.add(Message(role="user", content=prompt))
 

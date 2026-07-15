@@ -53,6 +53,10 @@ def parse_final_answer(text: str, workspace: str = None) -> list[dict[str, str]]
         # (this module is used standalone, without the package installed).
         entry = re.sub(r"^\s*[-*]+\s*", "", entry.strip())
         match = re.match(r"(.+?):L?(\d+)(?:[-–]L?(\d+))?\s*(.*)", entry)
+        # A citation path must look like a path — prose tokens such as
+        # "at 10:30" or "ratio 1:2" also match the entry regex.
+        if match and not any(ch in match.group(1) for ch in "/\\."):
+            match = None
         if match:
             file_path = match.group(1).strip().strip("*`").strip()
             if workspace is not None and file_path.startswith(workspace):
@@ -60,6 +64,8 @@ def parse_final_answer(text: str, workspace: str = None) -> list[dict[str, str]]
             explanation = match.group(4).strip() if match.group(4) else ""
             start_line = int(match.group(2))
             end_line = int(match.group(3)) if match.group(3) else start_line
+            if end_line < start_line:
+                end_line = start_line
             line_range = f"{start_line}-{end_line}" if end_line != start_line else str(start_line)
             file_paths.add(file_path)
             n_citations_lines += end_line - start_line + 1

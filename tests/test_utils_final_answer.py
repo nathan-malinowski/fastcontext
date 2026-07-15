@@ -124,6 +124,24 @@ def test_parse_citations_no_tag_returns_empty_list():
     assert parse_citations("no tags here") == []
 
 
+def test_prose_with_time_and_ratio_survives_as_prose():
+    body = "The scheduler runs at 10:30 daily with ratio 1:2"
+    result = get_final_answer(_wrap(body))
+    print(result)
+    assert body in result, "prose with token:digits must not be destroyed into an empty block"
+
+
+def test_non_pathlike_token_is_not_a_citation():
+    assert parse_citations(_wrap("See section 10:30 of the video")) == []
+
+
+def test_attached_inverted_range_is_clamped():
+    citations = parse_citations(_wrap(f"{_REAL_FILE}:120-3 call sites"))
+    assert len(citations) == 1
+    assert citations[0]["start_line"] == 120
+    assert citations[0]["end_line"] == 120, "end < start must be clamped, never inverted"
+
+
 if __name__ == "__main__":
     test_single_citation_no_explanation()
     test_single_citation_with_line_range()

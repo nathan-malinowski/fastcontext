@@ -30,3 +30,20 @@ def test_spaced_hyphen_does_not_invert_range_metrics():
     c = result["citations"][0]
     assert (c["start_line"], c["end_line"]) == (120, 120)
     assert result["n_citations_lines"] == 1, "line metrics must never go negative"
+
+
+def test_attached_inverted_range_is_clamped():
+    result = parse_final_answer("<final_answer>\nsrc/app.py:120-3 call sites\n</final_answer>")
+    c = result["citations"][0]
+    assert (c["start_line"], c["end_line"]) == (120, 120)
+    assert result["n_citations_lines"] == 1, "line metrics must never go negative"
+
+
+def test_workspace_prefix_is_stripped():
+    result = parse_final_answer("<final_answer>\n/testbed/src/x.py:10-15 note\n</final_answer>", workspace="/testbed/")
+    assert result["citations"][0]["path"] == "src/x.py"
+
+
+def test_non_pathlike_token_is_not_a_citation():
+    result = parse_final_answer("<final_answer>\nSee section 10:30 of the video\n</final_answer>")
+    assert result["n_citations"] == 0

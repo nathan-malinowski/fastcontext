@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { closeSync, existsSync, openSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 // OpenCode-native translation of the Claude Code "fastcontext-enforcer" hook.
 //
@@ -14,7 +14,18 @@ import { resolve } from "node:path";
 // reusing it under OpenCode.
 //
 // The enforcer stands down (allows) when: the file is new, non-code, already
-// explored this session, or the FastContext endpoint is unreachable.
+// cited by a trajectory from this session, or the FastContext endpoint is
+// unreachable. The bash script scopes trajectories to the current session and
+// only counts <final_answer> citations — see the script for details.
+//
+// Session start: under Claude Code the script derives it from the transcript
+// file's birth time; OpenCode has no transcript, so the script falls back to a
+// stamp file (claude-fc-enforcer-<session>.start in TMPDIR) created on its
+// first run. Left alone, that stamp would be created at the first *edit*
+// attempt, disqualifying explorations done earlier in the session. So we touch
+// the stamp on the session's first tool call of any kind — exploration always
+// precedes editing, and the spawned script inherits our TMPDIR, so both sides
+// compute the same path.
 //
 // The bash enforcer lives at skills/fastcontext/hooks/fastcontext-enforcer.sh in
 // this repo, and is copied to ~/.config/opencode/hooks/ on install (see README).
@@ -41,12 +52,36 @@ function extractReason(stdout: string): string | undefined {
   }
 }
 
+// Sessions whose start stamp has been written this process lifetime. The
+// stamp file itself is the durable record; this just avoids re-statting it
+// on every tool call.
+const stampedSessions = new Set<string>();
+
+function ensureSessionStamp(sessionID: string): void {
+  if (stampedSessions.has(sessionID)) return;
+  stampedSessions.add(sessionID);
+  const stamp = join(
+    process.env.TMPDIR ?? tmpdir(),
+    `claude-fc-enforcer-${sessionID}.start`,
+  );
+  try {
+    // Create only if absent — "wx" refuses to touch an existing stamp, so a
+    // plugin reload never moves the session start forward.
+    closeSync(openSync(stamp, "wx"));
+  } catch {
+    // Already exists (expected) or TMPDIR unwritable; the script's own
+    // fallback creates the stamp on its first run in that case.
+  }
+}
+
 export default async () => {
   return {
     "tool.execute.before": async (
       input: { tool?: string; sessionID?: string },
       output: { args?: { file_path?: string } },
     ) => {
+      ensureSessionStamp(input.sessionID ?? "nosession");
+
       const tool = String(input.tool ?? "").toLowerCase();
       if (tool !== "edit" && tool !== "write") return;
 
