@@ -23,8 +23,23 @@ Fast, autonomous subagent that explores codebases through multi-step reasoning. 
 - You already read the exact file this session
 - Single obvious grep in one known file
 - Pure write/generate task with zero exploration needed
+- The endpoint is down and can't be started — fall back to normal exploration
+
+## Setup
+
+Requires an OpenAI-compatible endpoint (LM Studio, Ollama, or remote). Export before the first run:
+
+```bash
+export FC_MODEL=fastcontext-1.0-4b-sft        # must match an id from `curl $FC_BASE_URL/v1/models`
+export FC_BASE_URL=http://localhost:1234
+# optional: FC_API_KEY, FC_MAX_TOKENS (default 4096), FC_TEMPERATURE (default 0.7)
+```
+
+`Missing required environment variable` means the exports were lost — re-export in the same command.
 
 ## Usage
+
+Run from the repository you want to explore (the CWD is the exploration root):
 
 ```bash
 # Precise answer with file:line citations
@@ -36,3 +51,11 @@ fastcontext -q "<complex question>" --max-turns 12 --citation
 # Broader summary with explanations (may include some noise)
 fastcontext -q "<question>" --max-turns 8
 ```
+
+With `--citation`, unparseable or unvalidated answers fall back to the raw `<final_answer>` text — read it as prose in that case.
+
+## Query tips
+
+- **One focused question per run.** Broad multi-topic queries (e.g. "audit everything for 7 vulnerability classes") degrade small models — split into one run per subsystem or concern, then synthesize yourself.
+- **Name a file, symbol, or grep-able keyword** when you know one; abstract questions fail more often.
+- **Spot-check citations before relying on them.** If cited paths don't exist, the run failed — inspect `.fastcontext/trajectory_*.jsonl` for tool errors and re-run with a sharper query.

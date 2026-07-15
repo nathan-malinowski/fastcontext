@@ -21,14 +21,16 @@ def parse_citations(text: str) -> list:
         # /absolute/path/to/file_1.py:10-15
         # /absolute/path/to/file_1.py:10-15 (explanation 1)
         # /absolute/path/to/file_1.py:10 (explanation 2)
-        match = re.match(r"(.+?):(\d+(?:-\d+)?)\s*(.*)", entry.strip())
+        # - path/to/file.py:L10-L15 — explanation 3
+        # - **`path/to/file.py`**:L10 — explanation 4
+        entry = re.sub(r"^\s*[-*]+\s*", "", entry.strip())
+        match = re.match(r"(.+?):L?(\d+)(?:\s*[-–]\s*L?(\d+))?\s*(.*)", entry)
         if match:
-            file_path = match.group(1).strip()
-            line_range = match.group(2).strip()
-            explanation = match.group(3).strip() if match.group(3) else ""
-            start_line, end_line = line_range.split("-") if "-" in line_range else (line_range, line_range)
-            start_line = int(start_line.strip())
-            end_line = int(end_line.strip())
+            file_path = match.group(1).strip().strip("*`").strip()
+            explanation = match.group(4).strip() if match.group(4) else ""
+            start_line = int(match.group(2))
+            end_line = int(match.group(3)) if match.group(3) else start_line
+            line_range = f"{start_line}-{end_line}" if end_line != start_line else str(start_line)
             citations.append(
                 {
                     "path": file_path,
@@ -63,9 +65,16 @@ def format_citations(citations: list, validate: bool = True) -> str:
 
 
 def get_final_answer(text: str) -> str:
+    final_answer = re.search(r"<final_answer>(.*?)</final_answer>", text, re.DOTALL)
+    if final_answer is None:
+        return text.strip()
     citations = parse_citations(text)
-    final_answer = format_citations(citations)
-    return final_answer
+    formatted = format_citations(citations)
+    if not re.search(r"<final_answer>\s*</final_answer>", formatted):
+        return formatted
+    # No citation survived parsing/validation — return the raw answer verbatim
+    # rather than an empty block.
+    return "<final_answer>\n" + final_answer.group(1).strip() + "\n</final_answer>"
 
 
 if __name__ == "__main__":

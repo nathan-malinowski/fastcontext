@@ -38,6 +38,10 @@ class Agent:
     async def _agent_loop(self, prompt: str, max_turns: int, verbose: bool, citation: bool) -> str:
         # user promp -> tool calls -> tool results -> tool calls ... -> assistant final answer
         n_turn = 0
+        # The model has no other way to learn the exploration root; without it,
+        # small models guess absolute paths and every tool call fails.
+        if self.work_dir not in prompt:
+            prompt = f"Repository root: {self.work_dir} (use this absolute path in all tool calls). Question: {prompt}"
         await self.context.add(Message(role="system", content=self.system_prompt))
         await self.context.add(Message(role="user", content=prompt))
 

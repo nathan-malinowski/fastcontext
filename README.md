@@ -200,6 +200,49 @@ Useful CLI options:
 | `--verbose` | Print intermediate messages and runtime information. |
 | `--citation` | Return only the `<final_answer>` block when present. |
 
+## Claude Code Integration (Optional)
+
+The `skills/fastcontext/` directory ships a [Claude Code](https://claude.com/claude-code) skill that
+teaches the agent to delegate repository exploration to FastContext instead of running its own
+grep/read chains.
+
+Install the skill for all projects:
+
+```bash
+cp -r skills/fastcontext ~/.claude/skills/fastcontext
+```
+
+Optionally, install the exploration-enforcer hook. It blocks the first edit to any code file that no
+FastContext trajectory has touched yet, nudging the agent to explore before editing. It fires at most
+once per file per session, and stands down automatically when the FastContext endpoint is unreachable:
+
+```bash
+mkdir -p ~/.claude/hooks
+cp skills/fastcontext/hooks/fastcontext-enforcer.sh ~/.claude/hooks/
+```
+
+Then register it in `~/.claude/settings.json` (merge into any existing `hooks` key):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/fastcontext-enforcer.sh",
+            "timeout": 10,
+            "statusMessage": "Checking fastcontext exploration..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## Programmatic Use
 
 ```python

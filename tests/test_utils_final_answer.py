@@ -53,6 +53,49 @@ def test_mix_valid_and_invalid_files():
     assert "/nonexistent/file.py" not in result
 
 
+def test_l_prefixed_line_range():
+    text = _wrap(f"{_REAL_FILE}:L1-L5 — parses citations")
+    result = get_final_answer(text)
+    print(result)
+    assert f"{_REAL_FILE}:1-5 — parses citations" in result
+
+
+def test_bullet_entry_with_l_prefix():
+    text = _wrap(f"- {_REAL_FILE}:L2 — note")
+    result = get_final_answer(text)
+    print(result)
+    assert f"{_REAL_FILE}:2 — note" in result
+
+
+def test_markdown_wrapped_path():
+    text = _wrap(f"- **`{_REAL_FILE}`**:L1-L3 — note")
+    result = get_final_answer(text)
+    print(result)
+    assert f"{_REAL_FILE}:1-3 — note" in result
+
+
+def test_prose_answer_falls_back_to_raw_block():
+    body = f"- **Validation location**: `{_REAL_FILE}` — checks ripgrep via shutil.which"
+    text = _wrap(body)
+    result = get_final_answer(text)
+    print(result)
+    assert body in result, "unparseable answers must be returned verbatim, not dropped"
+
+
+def test_all_citations_invalid_falls_back_to_raw_block():
+    body = "/nonexistent/file.py:2 (dropped by validation)"
+    text = _wrap(body)
+    result = get_final_answer(text)
+    print(result)
+    assert body in result
+
+
+def test_no_final_answer_tag_returns_text():
+    result = get_final_answer("plain answer with no tags")
+    print(result)
+    assert result == "plain answer with no tags"
+
+
 if __name__ == "__main__":
     test_single_citation_no_explanation()
     test_single_citation_with_line_range()

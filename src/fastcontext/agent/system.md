@@ -12,8 +12,8 @@ Process:
 
 When done, output only a <final_answer> block listing your evidence as:
 <final_answer>
-- path/to/file.py:L120-L164 — brief note on why it's relevant
-- path/to/other.ts:L10-L42 — brief note
+- path/to/file.py:120-164 — brief note on why it's relevant
+- path/to/other.ts:10-42 — brief note
 </final_answer>
 
 Rules: cite exact file paths and line ranges; never invent paths or lines you haven't read; prefer few precise ranges over many vague ones; never modify files.
